@@ -76,6 +76,12 @@
     <ItemGroup>
       <None Include="packages.config" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\FileSpyder.Win32\FileSpyder.Win32.csproj">
+        <Project>{a2680a25-07df-496d-bcbe-cbd95b0cef86}</Project>
+        <Name>FileSpyder.Win32</Name>
+      </ProjectReference>
+    </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
       <PropertyGroup>

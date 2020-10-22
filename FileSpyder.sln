@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSpyder", "FileSpyder\FileSpyder.csproj", "{5D7AE181-5D2F-4713-9A2E-ADD037C01297}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSpyder.Win32", "FileSpyder.Win32\FileSpyder.Win32.csproj", "{A2680A25-07DF-496D-BCBE-CBD95B0CEF86}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{5D7AE181-5D2F-4713-9A2E-ADD037C01297}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D7AE181-5D2F-4713-9A2E-ADD037C01297}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D7AE181-5D2F-4713-9A2E-ADD037C01297}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2680A25-07DF-496D-BCBE-CBD95B0CEF86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2680A25-07DF-496D-BCBE-CBD95B0CEF86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2680A25-07DF-496D-BCBE-CBD95B0CEF86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2680A25-07DF-496D-BCBE-CBD95B0CEF86}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
