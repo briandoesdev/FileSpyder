@@ -14,13 +14,13 @@ namespace FileSpyder.Win32
         private const string UNC_PREFIX = @"\\?\UNC\";
         private const string FS_PREFIX = @"\\?\";
         
-        public static List<FileInformation> FindFirstFileEx(
+        public static List<string> FindFirstFileEx(
             string path,
             string searchPattern,
             bool getDirectory,
             bool recurse,
             bool parallel,
-            bool suppressErrors,
+            bool showErrors,
             bool largeFetch
         )
         {
@@ -58,9 +58,8 @@ namespace FileSpyder.Win32
                 dwAdditionalFlags: flags
             );
             
-            List<FileInformation> fileResults = new List<FileInformation>();
-            List<FileInformation> subDirectoryList = new List<FileInformation>();
-            List<FileInformation> hiddenList = new List<FileInformation>();
+            List<string> fileResults = new List<string>();
+            List<string> subDirectoryList = new List<string>();
             
             // verify FindFirstFileEx didnt return an error
             if (!handle.IsInvalid)
@@ -70,19 +69,12 @@ namespace FileSpyder.Win32
                     // skip . and .. files
                     if (lpFindFileData.cFileName != "." && lpFindFileData.cFileName != "..")
                     {
-                        if (lpFindFileData.dwFileAttributes == FileAttributes.Hidden)
-                        {
-                            string fullName = Path.Combine(path, lpFindFileData.cFileName);
-                            hiddenList.Add(new FileInformation() { Path = fullName });
-                        }
-                        
                         // check if we are working with a directory
                         if ((lpFindFileData.dwFileAttributes & FileAttributes.Directory) == FileAttributes.Directory)
                         {
                             if (!recurse) continue;
                             
-                            string fullName = Path.Combine(path, lpFindFileData.cFileName);
-                            subDirectoryList.Add(new FileInformation() { Path = fullName });
+                            subDirectoryList.Add(Path.Combine(path, lpFindFileData.cFileName));
                         }
                         else
                         {
@@ -90,25 +82,7 @@ namespace FileSpyder.Win32
                             
                             if (FileMatch(lpFindFileData.cFileName, searchPattern))
                             {
-                                string fullName = Path.Combine(path, lpFindFileData.cFileName);
-                                long? fileSize = null;
-
-                                if (lpFindFileData.dwFileAttributes != FileAttributes.Directory)
-                                {
-                                    fileSize = (lpFindFileData.nFileSizeHigh * (2 ^ 32) + lpFindFileData.nFileSizeLow);
-                                }
-                                
-                                fileResults.Add(new FileInformation()
-                                {
-                                    Name = lpFindFileData.cFileName, 
-                                    Path = Path.Combine(path, lpFindFileData.cFileName), 
-                                    Parent = path, 
-                                    Attributes = lpFindFileData.dwFileAttributes, 
-                                    FileSize = fileSize, 
-                                    CreationTime = lpFindFileData.ftCreationTime.ToDateTime(), 
-                                    LastAccessTime = lpFindFileData.ftLastAccessTime.ToDateTime(), 
-                                    LastWriteTime = lpFindFileData.ftLastWriteTime.ToDateTime() 
-                                });
+                                fileResults.Add(string.Concat(path, lpFindFileData.cFileName));
                             }
                         }
                     }
@@ -122,13 +96,13 @@ namespace FileSpyder.Win32
                     {
                         subDirectoryList.AsParallel().ForAll(x =>
                         {
-                            List<FileInformation> resultSubDirectory = FindFirstFileEx(
-                                x.Path,
+                            List<string> resultSubDirectory = FindFirstFileEx(
+                                x,
                                 searchPattern,
                                 getDirectory,
                                 true,
                                 false,
-                                suppressErrors,
+                                showErrors,
                                 largeFetch
                             );
 
@@ -140,19 +114,19 @@ namespace FileSpyder.Win32
                     }
                     else
                     {
-                        foreach (FileInformation directory in subDirectoryList)
+                        foreach (string directory in subDirectoryList)
                         {
                             var results = FindFirstFileEx(
-                                directory.Path,
+                                directory,
                                 searchPattern,
                                 getDirectory,
                                 true,
                                 false,
-                                suppressErrors,
+                                showErrors,
                                 largeFetch
                             );
                                 
-                            foreach (FileInformation result in results)
+                            foreach (string result in results)
                             {
                                 fileResults.Add(result);
                             }
@@ -162,7 +136,7 @@ namespace FileSpyder.Win32
             }
             else
             {
-                if (!suppressErrors)
+                if (showErrors)
                 {
                     int hr = Marshal.GetLastWin32Error();
                     if (hr != 2 && hr != 0x12)
