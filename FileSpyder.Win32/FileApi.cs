@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading.Tasks;
@@ -12,6 +11,9 @@ namespace FileSpyder.Win32
 {
     public class FileApi
     {
+        // One of these prefixes will be added before the directory to search. This allows us to go over the MAX_PATH
+        // of the file system.
+        // https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
         private const string UNC_PREFIX = @"\\?\UNC\";
         private const string FS_PREFIX = @"\\?\";
         
@@ -30,10 +32,17 @@ namespace FileSpyder.Win32
             Win32Native.FINDEX_ADDITIONAL_FLAGS flags = 
                 largeFetch ? 0 : Win32Native.FINDEX_ADDITIONAL_FLAGS.FindFirstExLargeFetch;
 
+            // When looking for a file we need to know if its on a local drive or network drive.
+            // This will allow us to correctly prefix the path.
+            // Below we check if a path starts with '\\' which signals a network path (UNC). If it does, add the
+            // UNC prefix, otherwise add the FileSystem prefix
             var prefixedPath = path.StartsWith(@"\\") ? path.Replace(@"\\", UNC_PREFIX) : string.Concat(FS_PREFIX, path);
             prefixedPath = string.Concat(prefixedPath, prefixedPath.EndsWith(@"\") ? @"*" : @"\*");
-
-
+            
+            
+            // I will use this handler to start the initial search with the first file in the directory.
+            // Afterwards, the handler will be passed to FindNextFile() in our Do..While{} loop as we continue searching
+            // for files in the specified directory.
             var handle = Win32Native.FindFirstFileExW(
                 prefixedPath,
                 Win32Native.FINDEX_INFO_LEVELS.FindExInfoBasic,
@@ -43,28 +52,42 @@ namespace FileSpyder.Win32
                 flags
             );
             
+            
+            // Going off my inspiration from Communary.FileExtensions, I chose to save the results in a List of type 
+            // string. I felt it was better to keep it simple then use the FileInformation type.
             List<string> fileResults = new List<string>();
             List<string> subDirectoryList = new List<string>();
             
-            // verify FindFirstFileEx didnt return an error
+            // Now, we check to make sure that something didnt raise an exception of some kind.
             if (!handle.IsInvalid)
             {
+                
+                // Start the do..while{} loop. This will only search files in the specified directory. Parallelism 
+                // is added by seeing if the current item being checked is a directory, if it is and the recurse flag
+                // was raised we add it to the subdirectoryResults list. This list will be ran through the Parallel.ForEach
+                // function after the handler is disposed.
                 do
                 {
                     // skip . and .. files
                     if (lpFindFileData.cFileName != "." && lpFindFileData.cFileName != "..")
                     {
-                        // check if we are working with a directory
+                        // this is where we do our check for the directory file attribute. I gotta learn why the bitwise
+                        // & works here and not logical &&.
                         if ((lpFindFileData.dwFileAttributes & FileAttributes.Directory) == FileAttributes.Directory)
                         {
                             if (!recurse) continue;
                             
+                            // remember! this will be ran through either parallel or a foreach block below!
                             subDirectoryList.Add(Path.Combine(path, lpFindFileData.cFileName));
                         }
                         else
                         {
+                            // At this point we *should* not be working with a directory, but never wanna take that 
+                            // change right?
                             if (lpFindFileData.dwFileAttributes == FileAttributes.Directory && !getDirectory) continue;
                             
+                            // This is the real important part, verify the file names match. If there is a match,
+                            // add it to the fileResults list.
                             if (FileMatch(lpFindFileData.cFileName, searchPattern))
                             {
                                 fileResults.Add(string.Concat(path, lpFindFileData.cFileName));
@@ -72,13 +95,29 @@ namespace FileSpyder.Win32
                         }
                     }
                 } while (Win32Native.FindNextFile(handle, out lpFindFileData));
-
+                
+                
+                // Once there are no more files to search we dispose of our handle.
                 handle.Dispose();
-
+                
+                
+                // Verify we have the recurse flag enabled
                 if (recurse)
                 {
+                    // Im not sure the real benefits here of using parallelism on the local drive vs a network drive.
+                    // Since a spinning drive can only have one read occur at a time is it really faster to perform
+                    // parallel runs? I can see it working for a SSD or network SAN with multiple drives for more
+                    // the one read at a time. Idk Ill do more research and look into the performance of using the
+                    // parallel flag and disabling it.
                     if (parallel)
                     {
+                        // Originally Communary.FileExtensions used subDirectoryList.AsParallel().ForAll(x => {});
+                        // That was causing some really bad performance for me. Could be my mangled code but moving
+                        // to Parallel.ForEach sped up searched by nearly 4x speeds. Now, from what I gathered this 
+                        // still is not optimal. As previously mentioned, I/O reads could be affected on a single 
+                        // platter drive. But for SSD/multiple drive? May work better?
+                        // Also, from what I gathered, Parallel.ForEach still has its own issues that are being masked.
+                        // https://stackoverflow.com/a/25950320
                         Parallel.ForEach(subDirectoryList, dir =>
                         {
                             List<string> resultSubDirectory = FindFirstFileEx(
@@ -99,6 +138,7 @@ namespace FileSpyder.Win32
                     }
                     else
                     {
+                        // same as above, just a normal foreach so not parallel.
                         foreach (string directory in subDirectoryList)
                         {
                             var results = FindFirstFileEx(
@@ -121,6 +161,7 @@ namespace FileSpyder.Win32
             }
             else
             {
+                // I hope no one uses this unless they dont like getting results
                 if (showErrors)
                 {
                     int hr = Marshal.GetLastWin32Error();
@@ -133,7 +174,8 @@ namespace FileSpyder.Win32
 
             return fileResults;
         }
-
+        
+        // This actually does the filename matching
         private static bool FileMatch(string fileName, string searchPattern)
         {
             if (Win32Native.PathMatchSpec(fileName, searchPattern))
