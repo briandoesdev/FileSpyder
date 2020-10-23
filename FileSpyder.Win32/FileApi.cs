@@ -30,25 +30,9 @@ namespace FileSpyder.Win32
             Win32Native.FINDEX_ADDITIONAL_FLAGS flags = 
                 largeFetch ? 0 : Win32Native.FINDEX_ADDITIONAL_FLAGS.FindFirstExLargeFetch;
 
-            string prefixedPath;
-            if (path.StartsWith(@"\\"))
-            {
-                prefixedPath = path.Replace(@"\\", UNC_PREFIX);
-            }
-            else
-            {
-                prefixedPath = string.Concat(FS_PREFIX, path);
-            }
+            var prefixedPath = path.StartsWith(@"\\") ? path.Replace(@"\\", UNC_PREFIX) : string.Concat(FS_PREFIX, path);
+            prefixedPath = string.Concat(prefixedPath, prefixedPath.EndsWith(@"\") ? @"*" : @"\*");
 
-            if (prefixedPath.EndsWith(@"\"))
-            {
-                prefixedPath = String.Concat(prefixedPath, @"*");
-            }
-            else
-            {
-                prefixedPath = String.Concat(prefixedPath, @"\*");
-            }
-            
 
             var handle = Win32Native.FindFirstFileExW(
                 prefixedPath,
