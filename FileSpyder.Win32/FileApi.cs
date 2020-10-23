@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Threading.Tasks;
 
 namespace FileSpyder.Win32
 {
@@ -50,12 +51,12 @@ namespace FileSpyder.Win32
             
 
             var handle = Win32Native.FindFirstFileExW(
-                lpFileName: prefixedPath,
-                fInfoLevelId: Win32Native.FINDEX_INFO_LEVELS.FindExInfoBasic,
-                lpFindFileData: out lpFindFileData,
-                fSearchOp: Win32Native.FINDEX_SEARCH_OPS.FindExSearchNameMatch,
-                lpSearchFilter: IntPtr.Zero,
-                dwAdditionalFlags: flags
+                prefixedPath,
+                Win32Native.FINDEX_INFO_LEVELS.FindExInfoBasic,
+                out lpFindFileData,
+                Win32Native.FINDEX_SEARCH_OPS.FindExSearchNameMatch,
+                IntPtr.Zero,
+                flags
             );
             
             List<string> fileResults = new List<string>();
@@ -94,10 +95,10 @@ namespace FileSpyder.Win32
                 {
                     if (parallel)
                     {
-                        subDirectoryList.AsParallel().ForAll(x =>
+                        Parallel.ForEach(subDirectoryList, dir =>
                         {
                             List<string> resultSubDirectory = FindFirstFileEx(
-                                x,
+                                dir,
                                 searchPattern,
                                 getDirectory,
                                 true,
@@ -105,7 +106,7 @@ namespace FileSpyder.Win32
                                 showErrors,
                                 largeFetch
                             );
-
+                            
                             lock (resultListLock)
                             {
                                 fileResults.AddRange(resultSubDirectory);

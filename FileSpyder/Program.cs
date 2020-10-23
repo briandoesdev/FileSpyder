@@ -14,10 +14,10 @@ namespace FileSpyder
         public static void Main(string path, string fileName, bool recurse, bool parallel, bool showErrors, bool largeFetch)
         {
 #if DEBUG
-            path = @"C:\temp";
-            fileName = "test.json";
-            recurse = true;
-            parallel = true;
+            path = @"C:\";
+            fileName = "*";
+            recurse = false;
+            parallel = false;
             showErrors = false;
             largeFetch = false;
 #endif
