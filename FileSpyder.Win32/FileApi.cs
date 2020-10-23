@@ -248,15 +248,4 @@ namespace FileSpyder.Win32
         public DateTime LastAccessTime;
         public DateTime LastWriteTime;
     }
-    
-    public static class FileTimeExtensions
-    {
-        public static DateTime ToDateTime(this System.Runtime.InteropServices.ComTypes.FILETIME time)
-        {
-            ulong high = (ulong)time.dwHighDateTime;
-            ulong low = (ulong)time.dwLowDateTime;
-            long fileTime = (long)((high << 32) + low);
-            return DateTime.FromFileTimeUtc(fileTime);
-        }
-    }
 }
