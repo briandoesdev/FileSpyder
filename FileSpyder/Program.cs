@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Reflection;
 using FileSpyder.Win32;
 
@@ -24,8 +23,6 @@ namespace FileSpyder
             largeFetch = true;
 #endif
 
-            List<string> errorList = new List<string>();
-            
             var (files, errors) = FileApi.FindFirstFileEx(
                 path,
                 fileName,
@@ -37,7 +34,15 @@ namespace FileSpyder
             );
 
             string appVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            Console.WriteLine("---------------------------");
             Console.WriteLine($"FileSpyder v{appVersion}\n");
+            Console.WriteLine($"Path: {path}");
+            Console.WriteLine($"File name: {fileName}");
+            Console.WriteLine($"Recursive search: {recurse}");
+            Console.WriteLine($"Parallel search: {parallel}");
+            Console.WriteLine($"Show errors: {showErrors}");
+            Console.WriteLine("---------------------------\n\n");
+
 
             Console.WriteLine($"Successfully found:");
             files.ForEach(x =>
@@ -51,8 +56,8 @@ namespace FileSpyder
                 Console.WriteLine(x.ToString());
             });
 
-            Console.WriteLine($"\nFound: {files.Count} file(s)");
-            Console.WriteLine($"Errors: {errors.Count}");
+            Console.WriteLine($"\nFiles Found: {files.Count}");
+            Console.WriteLine($"Total Errors: {errors.Count}");
         }
     }
 }
