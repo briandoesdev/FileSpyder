@@ -17,7 +17,7 @@ namespace FileSpyder.Win32
         private const string UNC_PREFIX = @"\\?\UNC\";
         private const string FS_PREFIX = @"\\?\";
         
-        public static List<string> FindFirstFileEx(
+        public static (List<string> files, List<string> errors) FindFirstFileEx(
             string path,
             string searchPattern,
             bool getDirectory,
@@ -56,6 +56,7 @@ namespace FileSpyder.Win32
             // Going off my inspiration from Communary.FileExtensions, I chose to save the results in a List of type 
             // string. I felt it was better to keep it simple then use the FileInformation type.
             List<string> fileResults = new List<string>();
+            List<string> errorResults = new List<string>();
             List<string> subDirectoryList = new List<string>();
             
             // Now, we check to make sure that something didnt raise an exception of some kind.
@@ -78,7 +79,7 @@ namespace FileSpyder.Win32
                             if (!recurse) continue;
                             
                             // remember! this will be ran through either parallel or a foreach block below!
-                            subDirectoryList.Add(Path.Combine(path, lpFindFileData.cFileName));
+                            subDirectoryList.Add(Path.Combine($"{path}\\", lpFindFileData.cFileName));
                         }
                         else
                         {
@@ -90,7 +91,7 @@ namespace FileSpyder.Win32
                             // add it to the fileResults list.
                             if (FileMatch(lpFindFileData.cFileName, searchPattern))
                             {
-                                fileResults.Add(string.Concat(path, lpFindFileData.cFileName));
+                                fileResults.Add(string.Concat($"{path}\\", lpFindFileData.cFileName));
                             }
                         }
                     }
@@ -120,12 +121,12 @@ namespace FileSpyder.Win32
                         // https://stackoverflow.com/a/25950320
                         Parallel.ForEach(subDirectoryList, dir =>
                         {
-                            List<string> resultSubDirectory = FindFirstFileEx(
+                            var (resultSubDirectory, errorResult) = FindFirstFileEx(
                                 dir,
                                 searchPattern,
                                 getDirectory,
                                 true,
-                                false,
+                                true,
                                 showErrors,
                                 largeFetch
                             );
@@ -133,6 +134,7 @@ namespace FileSpyder.Win32
                             lock (resultListLock)
                             {
                                 fileResults.AddRange(resultSubDirectory);
+                                errorResults.AddRange(errorResult);
                             }
                         });
                     }
@@ -141,7 +143,7 @@ namespace FileSpyder.Win32
                         // same as above, just a normal foreach so not parallel.
                         foreach (string directory in subDirectoryList)
                         {
-                            var results = FindFirstFileEx(
+                            var (results, errorResult) = FindFirstFileEx(
                                 directory,
                                 searchPattern,
                                 getDirectory,
@@ -155,6 +157,11 @@ namespace FileSpyder.Win32
                             {
                                 fileResults.Add(result);
                             }
+
+                            foreach (string error in errorResult)
+                            {
+                                errorResults.Add(error);
+                            }
                         }
                     }
                 }
@@ -164,15 +171,16 @@ namespace FileSpyder.Win32
                 // I hope no one uses this unless they dont like getting results
                 if (showErrors)
                 {
-                    int hr = Marshal.GetLastWin32Error();
+                    errorResults.Add(path);
+                    /*int hr = Marshal.GetLastWin32Error();
                     if (hr != 2 && hr != 0x12)
                     {
                         throw new Win32Exception(hr);
-                    }
+                    }*/
                 }
             }
 
-            return fileResults;
+            return (fileResults, errorResults);
         }
         
         // This actually does the filename matching
