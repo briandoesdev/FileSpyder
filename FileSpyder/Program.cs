@@ -12,15 +12,11 @@ namespace FileSpyder
         /// <param name="parallel">Search multiple subdirectories at once</param>
         /// <param name="showErrors">Suppress errors</param>
         /// <param name="largeFetch">Uses a larger buffer for directory queries, which can increase performance of the find operation.</param>
-        public static void Main(string path, string fileName, bool recurse, bool parallel, bool showErrors, bool largeFetch)
+        public static void Main(string path, string fileName, bool recurse = true, bool parallel = true, bool showErrors = true, bool largeFetch = true)
         {
 #if DEBUG
             path = @"C:\Windows";
             fileName = "*.txt";
-            recurse = true;
-            parallel = true;
-            showErrors = true;
-            largeFetch = true;
 #endif
 
             var (files, errors) = FileApi.FindFirstFileEx(

@@ -1,7 +1,6 @@
 ﻿using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -125,8 +124,8 @@ namespace FileSpyder.Win32
                                 dir,
                                 searchPattern,
                                 getDirectory,
-                                true,
-                                true,
+                                recurse,
+                                parallel,
                                 showErrors,
                                 largeFetch
                             );
@@ -168,15 +167,9 @@ namespace FileSpyder.Win32
             }
             else
             {
-                // I hope no one uses this unless they dont like getting results
                 if (showErrors)
                 {
                     errorResults.Add(path);
-                    /*int hr = Marshal.GetLastWin32Error();
-                    if (hr != 2 && hr != 0x12)
-                    {
-                        throw new Win32Exception(hr);
-                    }*/
                 }
             }
 
